@@ -7,8 +7,9 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
     environment: devs
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -26,27 +27,27 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
+        username: ${{ secrets.EC2_USER }}   # ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           pkill app || true
-          mkdir -p /home/deploy/go-backend
+          mkdir -p /home/ec2-user/go-backend
 
     - name: Copy binary to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
+        username: ${{ secrets.EC2_USER }}   # ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         source: "app"
-        target: "/home/deploy/go-backend"
+        target: "/home/ec2-user/go-backend"
 
     - name: Start Go backend
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
+        username: ${{ secrets.EC2_USER }}   # ec2-user
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          chmod +x /home/deploy/go-backend/app
-          nohup /home/deploy/go-backend/app > app.log 2>&1 &
+          chmod +x /home/ec2-user/go-backend/app
+          nohup /home/ec2-user/go-backend/app > /home/ec2-user/go-backend/app.log 2>&1 &
