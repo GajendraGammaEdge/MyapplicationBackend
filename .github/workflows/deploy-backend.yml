@@ -1,0 +1,56 @@
+name: Deploy Go Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: devs
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    - name: Build Go Binary
+      run: |
+        cd backend
+        GOOS=linux GOARCH=amd64 go build -o app
+
+    - name: Stop old app on EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          pkill app || true
+          mkdir -p /home/deploy/go-backend
+
+    - name: Copy binary to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "backend/app"
+        target: "/home/deploy/go-backend"
+        strip_components: 1
+
+    - name: Start Go backend
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          chmod +x /home/deploy/go-backend/app
+          nohup /home/deploy/go-backend/app > app.log 2>&1 &
